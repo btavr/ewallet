@@ -51,7 +51,12 @@ App_C_Flags += -DDEBUG -UNDEBUG -UEDEBUG
 
 App_Cpp_Flags := $(App_C_Flags)
 
-App_Link_Flags := -lm
+# ALTERAÇÃO 9: Adiciona bibliotecas SGX necessárias para a ligação
+# -L$(SGX_SDK)/lib64: caminho para as bibliotecas SGX (64-bit)
+# -lsgx_urts: biblioteca para criar/destruir enclaves (sgx_create_enclave, sgx_destroy_enclave)
+# -lpthread: biblioteca de threads (necessária para SGX)
+# -lm: biblioteca matemática
+App_Link_Flags := -L$(SGX_SDK)/lib64 -lsgx_urts -lpthread -lm
 
 .PHONY: all target run
 all:
