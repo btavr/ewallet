@@ -76,9 +76,14 @@ $(Enclave_EDL_U): $(Enclave_EDL)
 	@$(SGX_EDGER8R) --untrusted $(Enclave_EDL) --search-path $(SGX_SDK)/include --search-path $(APP_DIR)/enclave/conf --untrusted-dir $(APP_OBJDIR)
 	@echo "EDL  =>  $@"
 
+# ALTERAÇÃO 3: Regra explícita para enclave_u.h
+# Garante que o make sabe que este ficheiro é gerado pela regra acima
+$(Enclave_EDL_U_H): $(Enclave_EDL_U)
+
 # ALTERAÇÃO 2.5: Compila o ficheiro enclave_u.c gerado pelo EDL
 # Este ficheiro contém as funções stub que permitem à aplicação chamar o enclave
-$(APP_OBJDIR)/enclave_u.o: $(Enclave_EDL_U)
+# Depende também de enclave_u.h para garantir que ambos são gerados primeiro
+$(APP_OBJDIR)/enclave_u.o: $(Enclave_EDL_U) $(Enclave_EDL_U_H)
 	@$(CC) $(SGX_COMMON_CFLAGS) $(App_C_Flags) -c $< -o $@
 	@echo "CC   <=  $<"
 
