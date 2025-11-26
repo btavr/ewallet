@@ -57,7 +57,8 @@ App_Link_Flags := -lm
 all:
 	@$(MAKE) target
 
-target: $(APP_BINDIR)/$(APP_NAME)
+# ALTERAÇÃO 4: Garante que enclave_u.h é gerado antes de compilar a aplicação
+target: $(Enclave_EDL_U_H) $(APP_BINDIR)/$(APP_NAME)
 
 run: all
 	@cd $(APP_BINDIR) && ./$(APP_NAME)
@@ -78,6 +79,7 @@ $(Enclave_EDL_U): $(Enclave_EDL)
 
 # ALTERAÇÃO 3: Regra explícita para enclave_u.h
 # Garante que o make sabe que este ficheiro é gerado pela regra acima
+# O sgx_edger8r gera ambos os ficheiros .c e .h ao mesmo tempo
 $(Enclave_EDL_U_H): $(Enclave_EDL_U)
 
 # ALTERAÇÃO 2.5: Compila o ficheiro enclave_u.c gerado pelo EDL
