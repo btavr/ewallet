@@ -175,7 +175,13 @@ int main(int argc, char** argv) {
 
         // show wallet
         else if(p_value!=NULL && s_flag) {
-            ret = ecall_show_wallet(p_value);
+            int ret_val;
+            sgx_status_t status = ecall_show_wallet(global_eid, &ret_val, p_value);
+            if (status != SGX_SUCCESS) {
+                print_error_message(status);
+                ret_val = -1;
+            }
+            ret = ret_val;
             if (is_error(ret)) {
             	printf("[ERROR] Failed to retrieve eWallet.\n");
             }
@@ -183,7 +189,13 @@ int main(int argc, char** argv) {
 
         // add item
         else if (p_value!=NULL && a_flag && x_value!=NULL && y_value!=NULL && z_value!=NULL) {
-            ret = ecall_add_item(p_value, x_value, y_value, z_value);
+            int ret_val;
+            sgx_status_t status = ecall_add_item(global_eid, &ret_val, p_value, x_value, y_value, z_value);
+            if (status != SGX_SUCCESS) {
+                print_error_message(status);
+                ret_val = -1;
+            }
+            ret = ret_val;
             if (is_error(ret)) {
             	printf("[ERROR] Failed to add new item to the eWallet.\n");
             }
@@ -200,7 +212,13 @@ int main(int argc, char** argv) {
             	printf("[ERROR] Option -r requires an integer argument.\n");
             }
             else {
-            	ret = ecall_remove_item(p_value, index);
+                int ret_val;
+                sgx_status_t status = ecall_remove_item(global_eid, &ret_val, p_value, index);
+                if (status != SGX_SUCCESS) {
+                    print_error_message(status);
+                    ret_val = -1;
+                }
+                ret = ret_val;
                 if (is_error(ret)) {
                 	printf("[ERROR] Failed to remove item from the eWallet.\n");
                 }
@@ -242,7 +260,13 @@ int create_wallet(const char* master_password) {
 	}
 
 	// create new wallet
-    return ecall_create_wallet(master_password);
+	int ret_val;
+	sgx_status_t status = ecall_create_wallet(global_eid, &ret_val, master_password);
+	if (status != SGX_SUCCESS) {
+		print_error_message(status);
+		return -1;
+	}
+	return ret_val;
 }
 
 int show_wallet(const char* master_password, wallet_t* wallet, size_t wallet_size) {
