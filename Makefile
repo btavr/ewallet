@@ -1,3 +1,13 @@
+######## SGX SDK Settings ########
+
+# SGX_SDK deve apontar para o diretório de instalação do Intel SGX SDK
+SGX_SDK ?= /opt/intel/sgxsdk
+SGX_MODE ?= HW
+SGX_ARCH ?= x64
+
+# Inclui o Makefile comum do SGX SDK que define variáveis importantes
+include $(SGX_SDK)/buildenv.mk
+
 ######## App Settings ########
 
 APP_NAME   := ewallet

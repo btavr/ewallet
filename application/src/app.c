@@ -318,6 +318,15 @@ int ocall_load_wallet(const uint8_t *data, const uint32_t size) {
     return 0;
 }
 
+/* OCall functions */
+void ocall_print_string( const char *str )
+{
+	/* Proxy/Bridge will check the length and null-terminate 
+	 * the input string to prevent buffer overflow. 
+	 */
+	printf( "%s", str );
+}
+
 //no sensitive information is displayed and so it is not needed to in sgx
 //prints error messages based on the error code
 int is_error(int error_code) {
