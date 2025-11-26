@@ -269,6 +269,7 @@ int create_wallet(const char* master_password) {
 	return ret_val;
 }
 
+/* Função antiga - não é mais usada, substituída por ecall_show_wallet
 int show_wallet(const char* master_password, wallet_t* wallet, size_t wallet_size) {
 
 	int ret;
@@ -286,6 +287,7 @@ int show_wallet(const char* master_password, wallet_t* wallet, size_t wallet_siz
 
 	return RET_SUCCESS;
 }
+*/
 
 /*int change_master_password(const char* old_password, const char* new_password) {
 
@@ -332,7 +334,7 @@ int is_wallet(void) {
     return 0;
 }
 
-int ocall_save_wallet(const uint8_t *data, const uint32_t size)
+int ocall_save_wallet(const uint8_t *data, int size)
 {
     FILE *fp = fopen(WALLET_FILE, "w");
     if (fp == NULL ){
@@ -343,7 +345,7 @@ int ocall_save_wallet(const uint8_t *data, const uint32_t size)
 	return 0;
 }
 
-int ocall_load_wallet(const uint8_t *data, const uint32_t size) {
+int ocall_load_wallet(uint8_t *data, int size) {
     FILE *fp = fopen(WALLET_FILE, "r");
     if (fp == NULL ){
         return 1;
