@@ -57,7 +57,8 @@ App_Link_Flags := -lm
 all:
 	@$(MAKE) target
 
-target: $(APP_BINDIR)/$(APP_NAME)
+# ALTERAÇÃO 4: Garante que enclave_u.h é gerado antes de compilar a aplicação
+target: $(Enclave_EDL_U_H) $(APP_BINDIR)/$(APP_NAME)
 
 run: all
 	@cd $(APP_BINDIR) && ./$(APP_NAME)
@@ -71,13 +72,19 @@ run: all
 # --untrusted: gera código para a aplicação (untrusted side)
 # --search-path: diretórios onde procurar ficheiros incluídos no EDL
 # --untrusted-dir: diretório onde colocar os ficheiros gerados
+# ALTERAÇÃO 6: Usa o caminho completo do edger8r se a variável não estiver definida
+EDGER8R := $(if $(SGX_EDGER8R),$(SGX_EDGER8R),$(SGX_SDK)/bin/x64/sgx_edger8r)
 $(Enclave_EDL_U): $(Enclave_EDL)
 	@mkdir -p $(APP_OBJDIR)
-	@$(SGX_EDGER8R) --untrusted $(Enclave_EDL) --search-path $(SGX_SDK)/include --search-path $(APP_DIR)/enclave/conf --untrusted-dir $(APP_OBJDIR)
+	@$(EDGER8R) --untrusted $(Enclave_EDL) \
+		--search-path $(SGX_SDK)/include \
+		--search-path $(APP_DIR)/enclave/conf \
+		--untrusted-dir $(APP_OBJDIR)
 	@echo "EDL  =>  $@"
 
 # ALTERAÇÃO 3: Regra explícita para enclave_u.h
 # Garante que o make sabe que este ficheiro é gerado pela regra acima
+# O sgx_edger8r gera ambos os ficheiros .c e .h ao mesmo tempo
 $(Enclave_EDL_U_H): $(Enclave_EDL_U)
 
 # ALTERAÇÃO 2.5: Compila o ficheiro enclave_u.c gerado pelo EDL
