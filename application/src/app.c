@@ -147,7 +147,13 @@ int main(int argc, char** argv) {
 
         // create new wallet
         else if(p_value!=NULL && n_flag) {
-            ret = ecall_create_wallet(p_value);
+            int ret_val;
+            sgx_status_t status = ecall_create_wallet(global_eid, &ret_val, p_value);
+            if (status != SGX_SUCCESS) {
+                print_error_message(status);
+                ret_val = -1;
+            }
+            ret = ret_val;
             if (is_error(ret)) {
             	printf("[ERROR] Failed to create new eWallet.\n");
             }
