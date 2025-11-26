@@ -15,6 +15,6 @@ enclave {
          public int ecall_create_wallet([in, string] const char* master_password);
          public int ecall_show_wallet([in, string] const char* master_password);
          public int ecall_add_item([in, string] const char* master_password, [in, string] const char* title, [in, string] const char* username, [in, string] const char* password);
-         public int ecall_remove_item([in, string] const char* master_password, const int index);
+         public int ecall_remove_item([in, string] const char* master_password, int index);
     };
 };
