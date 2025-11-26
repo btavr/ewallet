@@ -19,7 +19,7 @@ sgx_enclave_id_t global_eid = 0;
 int main(int argc, char** argv) {
 
     int ret;
-    sgx_status_t ret = SGX_ERROR_UNEXPECTED;
+    sgx_status_t ret_enclave = SGX_ERROR_UNEXPECTED;
     
 	/* Call sgx_create_enclave to initialize an enclave instance */
 	/* Debug Support: set 2nd parameter to 1 */
