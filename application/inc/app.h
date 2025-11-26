@@ -3,6 +3,8 @@
 
 #include "config.h"
 
+#define ENCLAVE_FILENAME "enclave.signed.so"
+
 #define RET_SUCCESS 0
 #define ERR_PASSWORD_OUT_OF_RANGE 1
 #define ERR_WALLET_ALREADY_EXISTS 2
@@ -17,10 +19,14 @@
 #define NUM_SIZE 10
 #define SYM_SIZE 21
 
+extern sgx_enclave_id_t global_eid;	/* global enclave id */
+
 static char numbers[] = "1234567890";
 static char letter[]  = "abcdefghijklmnoqprstuvwyzx";
 static char letterr[] = "ABCDEFGHIJKLMNOQPRSTUYWVZX";
 static char symbols[] = "!@#$%^&*(){}[]:<>?,./";
+
+
 
 // item
 struct Item {
@@ -40,15 +46,15 @@ typedef struct Wallet wallet_t;
 
 int generate_password(char *p_value, int p_length);
 char get_pwd_char(char *charlist, int len);
-int change_master_password(const char* old_password, const char* new_password);
-int add_item(const char* master_password, const item_t* item, const size_t item_size);
-int remove_item(const char* master_password, const int index);
-int save_wallet(const wallet_t* wallet, const size_t wallet_size);
-int load_wallet(wallet_t* wallet, const size_t wallet_size);
+//int change_master_password(const char* old_password, const char* new_password);
+//int add_item(const char* master_password, const item_t* item, const size_t item_size);
+//int remove_item(const char* master_password, const int index);
+//int save_wallet(const wallet_t* wallet, const size_t wallet_size);
+//int load_wallet(wallet_t* wallet, const size_t wallet_size);
 int is_wallet(void);
 int create_wallet(const char* master_password);
 int show_wallet(const char* master_password, wallet_t* wallet, size_t wallet_size);
-void print_wallet(const wallet_t* wallet);
+//void print_wallet(const wallet_t* wallet);
 int is_error(int error_code);
 void show_help();
 void show_version();

@@ -1,0 +1,20 @@
+/* Enclave.edl - Top EDL file. */
+
+enclave {
+
+    untrusted {
+        void ocall_print_string([in, string] const char *str);
+        int ocall_save_wallet(const uint8_t *data, const uint32_t size);
+        int ocall_load_wallet(const uint8_t *data, const uint32_t size);
+    };
+
+
+    trusted {
+         public int ecall_print_prime_random();
+         public int ecall_generate_password(int p_length);
+         public int ecall_create_wallet(const char* master_password);
+         public int ecall_show_wallet(const char* master_password);
+         public int ecall_add_item(const char* master_password, const char* title, const char* username, const char* password);
+         public int ecall_remove_item(
+    };
+};

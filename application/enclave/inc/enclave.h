@@ -13,10 +13,20 @@
 #define ERR_WALLET_FULL 6
 #define ERR_ITEM_DOES_NOT_EXIST 7
 #define ERR_ITEM_TOO_LONG 8
-#define	RAND_MAX	2147483647 /* The largest number rand will return (same as INT_MAX).  */
+
+#define SGX_ERROR_INVALID_PARAMETER  11
+#define SGX_ERROR_FAILURE_SEAL  12
+#define SGX_ERROR_FAILURE_UNSEAL  13
+
+
+
+#define	RAND_MAX 2147483647 /* The largest number rand will return (same as INT_MAX)  */
+#define UINT32_MAX 4294967295U
 #define ALPHA_SIZE 26
 #define NUM_SIZE 10
 #define SYM_SIZE 21
+
+
 
 static char numbers[] = "1234567890";
 static char letter[]  = "abcdefghijklmnoqprstuvwyzx";
@@ -44,5 +54,14 @@ int printf( const char *fmt, ... );
 int yetAnotherAtoiBecauseSgxNotFound(char *str);
 int get_random_int( void );
 int is_prime( int n );
+int generate_password(char *p_value, int p_length);
+char get_pwd_char(char *charlist, int len);
+int seal_my_wallet(wallet_t* wallet, uint32_t sealed_size, uint8_t *sealed_buffer);
+int unseal_my_wallet(wallet_t* wallet, uint32_t sealed_size, uint8_t *sealed_buffer);
+int create_wallet(const char* master_password);
+int show_wallet(const char* master_password);
+void print_wallet(const wallet_t* wallet);
+int add_item(const char* master_password, const item_t* item, const size_t item_size);
+int remove_item(const char* master_password, const int index);
 
 #endif /* !_ENCLAVE_H_ */
