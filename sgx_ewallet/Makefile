@@ -1,6 +1,6 @@
 ######## App Settings ########
 
-APP_NAME   := app
+APP_NAME   := ewallet
 
 APP_DIR    := application
 APP_SRCDIR := $(APP_DIR)/src
