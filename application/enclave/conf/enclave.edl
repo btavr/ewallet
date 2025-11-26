@@ -4,8 +4,8 @@ enclave {
 
     untrusted {
         void ocall_print_string([in, string] const char *str);
-        int ocall_save_wallet([user_check] const uint8_t *data, [in] const uint32_t size);
-        int ocall_load_wallet([user_check] uint8_t *data, [in] const uint32_t size);
+        int ocall_save_wallet([user_check] const uint8_t *data, int size);
+        int ocall_load_wallet([user_check] uint8_t *data, int size);
     };
 
 
