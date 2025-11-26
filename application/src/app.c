@@ -133,7 +133,12 @@ int main(int argc, char** argv) {
             	pwd_size = atoi(l_value) + 1;
             }
 
-            int ret = ecall_generate_password(pwd_size);
+            int ret;
+            sgx_status_t status = ecall_generate_password(global_eid, &ret, pwd_size);
+            if (status != SGX_SUCCESS) {
+                print_error_message(status);
+                ret = -1;
+            }
 
             if (is_error(ret)) {
             	printf("[ERROR] Failed to generate the password.\n");
