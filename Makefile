@@ -52,11 +52,20 @@ App_C_Flags += -DDEBUG -UNDEBUG -UEDEBUG
 App_Cpp_Flags := $(App_C_Flags)
 
 # ALTERAÇÃO 9: Adiciona bibliotecas SGX necessárias para a ligação
-# -L$(SGX_SDK)/lib64: caminho para as bibliotecas SGX (64-bit)
-# -lsgx_urts: biblioteca para criar/destruir enclaves (sgx_create_enclave, sgx_destroy_enclave)
-# -lpthread: biblioteca de threads (necessária para SGX)
-# -lm: biblioteca matemática
-App_Link_Flags := -L$(SGX_LIBRARY_PATH) -lsgx_urts -lpthread -lm
+# Seleciona automaticamente as libs de simulação (SIM) ou hardware (HW)
+ifeq ($(SGX_MODE), HW)
+	Urts_Library := sgx_urts
+	Uae_Service_Library := sgx_uae_service
+else
+	Urts_Library := sgx_urts_sim
+	Uae_Service_Library := sgx_uae_service_sim
+endif
+
+# -L$(SGX_LIBRARY_PATH): caminho para as bibliotecas definidas no buildenv
+# -l$(Urts_Library): biblioteca para criar/destruir enclaves (sgx_create_enclave, sgx_destroy_enclave)
+# -l$(Uae_Service_Library): comunicação com o serviço de atestação
+# -lpthread e -lm: dependências adicionais
+App_Link_Flags := -L$(SGX_LIBRARY_PATH) -l$(Urts_Library) -l$(Uae_Service_Library) -lpthread -lm
 
 .PHONY: all target run
 all:
