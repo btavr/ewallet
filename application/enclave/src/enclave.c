@@ -3,6 +3,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <math.h>
+#include <stdint.h>
 #include <sgx_trts.h>
 #include <sgx_tseal.h>
 
@@ -58,9 +59,12 @@ int yetAnotherAtoiBecauseSgxNotFound(char *str)
 *	the generated integer
 */
 int get_random_int( void ) {
-    unsigned char rand_num[10];
-    sgx_status_t rand_ret = sgx_read_rand(rand_num, sizeof(rand_num));
-    return yetAnotherAtoiBecauseSgxNotFound(rand_num);
+    uint32_t rand_val = 0;
+    sgx_status_t rand_ret = sgx_read_rand((unsigned char*)&rand_val, sizeof(rand_val));
+    if (rand_ret != SGX_SUCCESS) {
+        return 0;
+    }
+    return (int)(rand_val & 0x7fffffff);
 }
 
 /*
@@ -140,7 +144,11 @@ int generate_password(char *p_value, int p_length) {
 */
 char get_pwd_char(char *charlist, int len)
 {
-	return (charlist[(get_random_int() / (RAND_MAX / len))]);
+	int random_value = get_random_int();
+	if (len == 0) {
+		return '\0';
+	}
+	return charlist[random_value % len];
 }
 
 /*
