@@ -154,10 +154,8 @@ char get_pwd_char(char *charlist, int len)
 int seal_my_wallet(wallet_t* wallet, uint32_t sealed_size, uint8_t *sealed_buffer)
 {
     sgx_status_t ret = sgx_seal_data(0, NULL, sizeof(wallet_t), (uint8_t*)wallet, sealed_size, (sgx_sealed_data_t*)sealed_buffer);
-	free(wallet);
 
     if (ret != SGX_SUCCESS) {
-        free(sealed_buffer);
         return ERROR_SGX_FAILURE_SEAL;
     }
 	return RET_SUCCESS;
@@ -175,10 +173,8 @@ int unseal_my_wallet(wallet_t* wallet, uint32_t sealed_size, uint8_t *sealed_buf
 {
     uint32_t out_len = sizeof(wallet_t);
     sgx_status_t ret = sgx_unseal_data((sgx_sealed_data_t*)sealed_buffer, NULL, NULL, (uint8_t*)wallet, &out_len);
-	free(sealed_buffer);
 
     if (ret != SGX_SUCCESS) {
-		free(wallet);
 		return ERROR_SGX_FAILURE_UNSEAL;
 	}
 
