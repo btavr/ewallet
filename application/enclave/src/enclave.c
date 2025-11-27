@@ -243,7 +243,7 @@ int load_wallet(wallet_t* wallet) {
         return ERR_CANNOT_LOAD_WALLET;
 	}
 
-	uint8_t* sealed_buffer = (uint8_t*)malloc(sizeof(wallet_t));
+	uint8_t* sealed_buffer = (uint8_t*)malloc(sealed_size);
 
 	// load wallet
 	int retval;
@@ -528,16 +528,17 @@ int ecall_show_wallet(const char* master_password) {
 
 //ECALL to add an item to the wallet
 int ecall_add_item(const char* master_password, const char* title, const char* username, const char* password) {
-	item_t* new_item = (item_t*)malloc(sizeof(item_t));
-	strncpy(new_item->title, title, WALLET_MAX_ITEM_SIZE);
-	new_item->title[WALLET_MAX_ITEM_SIZE-1] = '\0';
-    strncpy(new_item->username, username, WALLET_MAX_ITEM_SIZE);
-	new_item->username[WALLET_MAX_ITEM_SIZE-1] = '\0';
-    strncpy(new_item->password, password, WALLET_MAX_ITEM_SIZE);
-	new_item->password[WALLET_MAX_ITEM_SIZE-1] = '\0';
-	int ret = add_item(master_password, new_item, sizeof(item_t));
-    free(new_item);
-    return ret;
+	if (title == NULL || username == NULL || password == NULL) {
+		return ERR_ITEM_TOO_LONG;
+	}
+
+	item_t new_item;
+	memset(&new_item, 0, sizeof(new_item));
+	strncpy(new_item.title, title, WALLET_MAX_ITEM_SIZE - 1);
+	strncpy(new_item.username, username, WALLET_MAX_ITEM_SIZE - 1);
+	strncpy(new_item.password, password, WALLET_MAX_ITEM_SIZE - 1);
+
+	return add_item(master_password, &new_item, sizeof(item_t));
 }
 
 //ECALL to remove an item from wallet
