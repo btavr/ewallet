@@ -3,7 +3,7 @@
 
 #include "config.h"
 
-#define ENCLAVE_FILENAME "enclave.signed.so"
+#define ENCLAVE_FILENAME "../enclave/enclave.signed.so"
 
 #define RET_SUCCESS 0
 #define ERR_PASSWORD_OUT_OF_RANGE 1
