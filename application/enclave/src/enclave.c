@@ -213,7 +213,13 @@ int save_wallet(wallet_t* wallet) {
 
 	if(ret == RET_SUCCESS) {
 		//Send sealed data to untrusted app
-		ret = ocall_save_wallet(sealed_buffer, sealed_size);
+		int retval;
+		sgx_status_t status = ocall_save_wallet(&retval, sealed_buffer, sealed_size);
+		if (status != SGX_SUCCESS) {
+			ret = 1;
+		} else {
+			ret = retval;
+		}
 	}
 
 	free(sealed_buffer);
@@ -244,8 +250,9 @@ int load_wallet(wallet_t* wallet) {
 	uint8_t* sealed_buffer = (uint8_t*)malloc(sizeof(wallet_t));
 
 	// load wallet
-	ret = ocall_load_wallet(sealed_buffer, sealed_size);
-	if (ret != 0) {
+	int retval;
+	sgx_status_t status = ocall_load_wallet(&retval, sealed_buffer, sealed_size);
+	if (status != SGX_SUCCESS || retval != 0) {
 		free(sealed_buffer);
 		return ERR_CANNOT_LOAD_WALLET;
 	}
@@ -526,9 +533,12 @@ int ecall_show_wallet(const char* master_password) {
 //ECALL to add an item to the wallet
 int ecall_add_item(const char* master_password, const char* title, const char* username, const char* password) {
 	item_t* new_item = (item_t*)malloc(sizeof(item_t));
-	strcpy(new_item->title, title);
-    strcpy(new_item->username, username);
-    strcpy(new_item->password, password);
+	strncpy(new_item->title, title, WALLET_MAX_ITEM_SIZE);
+	new_item->title[WALLET_MAX_ITEM_SIZE-1] = '\0';
+    strncpy(new_item->username, username, WALLET_MAX_ITEM_SIZE);
+	new_item->username[WALLET_MAX_ITEM_SIZE-1] = '\0';
+    strncpy(new_item->password, password, WALLET_MAX_ITEM_SIZE);
+	new_item->password[WALLET_MAX_ITEM_SIZE-1] = '\0';
 	int ret = add_item(master_password, new_item, sizeof(item_t));
     free(new_item);
     return ret;

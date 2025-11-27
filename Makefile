@@ -54,15 +54,16 @@ Enclave_C_Objects := $(Enclave_C_Files:$(ENCLAVE_SRCDIR)/%.c=$(ENCLAVE_OBJDIR)/%
 
 Enclave_Include_Paths := -I$(ENCLAVE_INCDIR) -I$(ENCLAVE_SRCDIR) -I$(SGX_SDK)/include -I$(SGX_SDK)/include/tlibc -I$(SGX_SDK)/include/libcxx
 
-Enclave_C_Flags := -nostdinc -fvisibility=hidden -fpie -fstack-protector $(Enclave_Include_Paths)
+Enclave_C_Flags := $(SGX_COMMON_CFLAGS) -nostdinc -fvisibility=hidden -fpie -fstack-protector -Wa,--noexecstack $(Enclave_Include_Paths)
 Enclave_C_Flags += -fno-builtin-printf -I.
 
-Enclave_Link_Flags := -Wl,--no-undefined -nostdlib -nodefaultlibs -nostartfiles -L$(SGX_LIBRARY_PATH) \
+Enclave_Link_Flags := $(SGX_COMMON_CFLAGS) -Wl,--no-undefined -nostdlib -nodefaultlibs -nostartfiles -L$(SGX_SDK)/lib64 -L$(SGX_LIBRARY_PATH) \
 	-Wl,--whole-archive -l$(Trts_Library) -Wl,--no-whole-archive \
 	-Wl,--start-group -lsgx_tstdc -lsgx_tcxx -lsgx_tcrypto -l$(Service_Library) -Wl,--end-group \
 	-Wl,-Bstatic -Wl,-Bsymbolic -Wl,--no-undefined \
 	-Wl,-pie,-eenclave_entry -Wl,--export-dynamic  \
 	-Wl,--defsym,__ImageBase=0 \
+	-Wl,-z,noexecstack \
 	-Wl,--version-script=$(ENCLAVE_CONFDIR)/enclave.lds
 
 Enclave_Name := enclave.so
@@ -139,7 +140,7 @@ $(ENCLAVE_OBJDIR)/%.o: $(ENCLAVE_SRCDIR)/%.c $(Enclave_EDL_T_H)
 	@echo "CC   <=  $<"
 
 $(ENCLAVE_DIR)/$(Enclave_Name): $(Enclave_C_Objects) $(ENCLAVE_OBJDIR)/enclave_t.o
-	@$(CC) $^ -o $@ $(Enclave_Link_Flags)
+	$(CXX) $^ -o $@ $(Enclave_Link_Flags)
 	@echo "LINK =>  $@"
 
 $(ENCLAVE_DIR)/$(Enclave_Signed_Name): $(ENCLAVE_DIR)/$(Enclave_Name)
