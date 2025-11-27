@@ -2,6 +2,7 @@
 SGX_SDK ?= /opt/sgxsdk
 SGX_MODE ?= SIM
 SGX_ARCH ?= x64
+SGX_LIBDIR := $(SGX_SDK)/lib64
 
 include $(SGX_SDK)/buildenv.mk
 
@@ -38,8 +39,13 @@ else
 	Trts_Library := sgx_trts_sim
 	Service_Library := sgx_tservice_sim
 endif
+Trts_Library_Path := $(SGX_LIBDIR)/lib$(Trts_Library).a
+Service_Library_Path := $(SGX_LIBDIR)/lib$(Service_Library).a
+Tstdc_Library_Path := $(SGX_LIBDIR)/libsgx_tstdc.a
+Tcxx_Library_Path := $(SGX_LIBDIR)/libsgx_tcxx.a
+Tcrypto_Library_Path := $(SGX_LIBDIR)/libsgx_tcrypto.a
 
-App_Link_Flags := -L$(SGX_SDK)/lib64 -L$(SGX_LIBRARY_PATH) -Wl,--no-as-needed -l$(Urts_Library) -l$(Uae_Service_Library) -lpthread -lm -ldl
+App_Link_Flags := -L$(SGX_LIBDIR) -L$(SGX_LIBRARY_PATH) -Wl,--no-as-needed -l$(Urts_Library) -l$(Uae_Service_Library) -lpthread -lm -ldl
 
 ######## Enclave Settings ########
 
@@ -57,11 +63,12 @@ Enclave_Include_Paths := -I$(ENCLAVE_INCDIR) -I$(ENCLAVE_SRCDIR) -I$(SGX_SDK)/in
 Enclave_C_Flags := $(SGX_COMMON_CFLAGS) -nostdinc -fvisibility=hidden -fpie -fstack-protector -Wa,--noexecstack $(Enclave_Include_Paths)
 Enclave_C_Flags += -fno-builtin-printf -I.
 
-Enclave_Link_Flags := $(SGX_COMMON_CFLAGS) -Wl,--no-undefined -nostdlib -nodefaultlibs -nostartfiles -L$(SGX_SDK)/lib64 -L$(SGX_LIBRARY_PATH) \
-	-Wl,--whole-archive -l$(Trts_Library) -Wl,--no-whole-archive \
-	-Wl,--start-group -lsgx_tstdc -lsgx_tcxx -lsgx_tcrypto -l$(Service_Library) -Wl,--end-group \
-	-Wl,-Bstatic -Wl,-Bsymbolic -Wl,--no-undefined \
-	-Wl,-pie,-eenclave_entry -Wl,--export-dynamic  \
+Enclave_Link_Flags := $(SGX_COMMON_CFLAGS) -Wl,--no-undefined -nostdlib -nodefaultlibs -nostartfiles -L$(SGX_LIBDIR) -L$(SGX_LIBRARY_PATH) \
+	-Wl,-Bsymbolic-functions -Bstatic \
+	-Wl,--whole-archive $(Trts_Library_Path) -Wl,--no-whole-archive \
+	-Wl,--start-group $(Tstdc_Library_Path) $(Tcxx_Library_Path) $(Tcrypto_Library_Path) $(Service_Library_Path) -Wl,--end-group \
+	-Wl,-pie,-eenclave_entry \
+	-Wl,--export-dynamic \
 	-Wl,--defsym,__ImageBase=0 \
 	-Wl,-z,noexecstack \
 	-Wl,--version-script=$(ENCLAVE_CONFDIR)/enclave.lds
