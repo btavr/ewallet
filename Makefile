@@ -6,7 +6,7 @@
 # O operador ?= permite sobrescrever esta variável ao executar make (ex: make SGX_SDK=/outro/caminho)
 SGX_SDK ?= /opt/sgxsdk
 # SGX_MODE define o modo de execução: HW (hardware) ou SIM (simulação)
-SGX_MODE ?= HW
+SGX_MODE ?= SIM
 # SGX_ARCH define a arquitetura: x64 (64-bit) ou x86 (32-bit)
 SGX_ARCH ?= x64
 
@@ -65,7 +65,7 @@ endif
 # -l$(Urts_Library): biblioteca para criar/destruir enclaves (sgx_create_enclave, sgx_destroy_enclave)
 # -l$(Uae_Service_Library): comunicação com o serviço de atestação
 # -lpthread e -lm: dependências adicionais
-App_Link_Flags := -L$(SGX_LIBRARY_PATH) -l$(Urts_Library) -l$(Uae_Service_Library) -lpthread -lm
+App_Link_Flags := -L$(SGX_SDK)/lib64 -L$(SGX_LIBRARY_PATH) -l$(Urts_Library) -l$(Uae_Service_Library) -lpthread -lm
 
 .PHONY: all target run
 all:
