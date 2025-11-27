@@ -1,9 +1,10 @@
 #include <stdio.h>      /* vsprintf */
 #include <stdarg.h>
 #include <string.h>
+#include <stdlib.h>
+#include <math.h>
 #include <sgx_trts.h>
 #include <sgx_tseal.h>
-#include <tlibc.h> 		/* malloc */
 
 
 #include "enclave_config.h"

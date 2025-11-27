@@ -1,26 +1,13 @@
 ######## SGX SDK Settings ########
-# ALTERAÇÃO 1: Configuração do SGX SDK
-# Esta secção foi adicionada para configurar o ambiente SGX necessário para compilar
-
-# SGX_SDK deve apontar para o diretório de instalação do Intel SGX SDK
-# O operador ?= permite sobrescrever esta variável ao executar make (ex: make SGX_SDK=/outro/caminho)
 SGX_SDK ?= /opt/sgxsdk
-# SGX_MODE define o modo de execução: HW (hardware) ou SIM (simulação)
 SGX_MODE ?= SIM
-# SGX_ARCH define a arquitetura: x64 (64-bit) ou x86 (32-bit)
 SGX_ARCH ?= x64
 
-# Inclui o Makefile comum do SGX SDK que define variáveis importantes como:
-# - SGX_COMMON_CFLAGS: flags de compilação comuns
-# - CC: compilador C
-# - SGX_EDGER8R: compilador EDL
-# - SGX_LIBRARY_PATH: caminho para as bibliotecas SGX
 include $(SGX_SDK)/buildenv.mk
 
 ######## App Settings ########
 
 APP_NAME   := ewallet
-
 APP_DIR    := application
 APP_SRCDIR := $(APP_DIR)/src
 APP_INCDIR := $(APP_DIR)/inc
@@ -28,104 +15,139 @@ APP_OBJDIR := $(APP_DIR)/obj
 APP_BINDIR := $(APP_DIR)/bin
 
 App_C_Files := $(wildcard $(APP_SRCDIR)/*.c)
-
 App_C_Objects := $(App_C_Files:$(APP_SRCDIR)/%.c=$(APP_OBJDIR)/%.o)
-# ALTERAÇÃO 2.2: Adiciona o ficheiro objeto gerado pelo EDL à lista de objetos
-# O ficheiro enclave_u.o contém as funções stub (ponteiros) para chamar o enclave
 App_C_Objects += $(APP_OBJDIR)/enclave_u.o
 
-# ALTERAÇÃO 2.1: EDL Settings - ficheiros gerados pelo compilador EDL
-# O EDL (Enclave Definition Language) define a interface entre a aplicação e o enclave
-Enclave_EDL := $(APP_DIR)/enclave/conf/enclave.edl  # Ficheiro fonte EDL
-Enclave_EDL_U := $(APP_OBJDIR)/enclave_u.c         # Ficheiro C gerado (untrusted)
-Enclave_EDL_U_H := $(APP_OBJDIR)/enclave_u.h       # Ficheiro header gerado (untrusted)
+Enclave_EDL := $(APP_DIR)/enclave/conf/enclave.edl
+Enclave_EDL_U := $(APP_OBJDIR)/enclave_u.c
+Enclave_EDL_U_H := $(APP_OBJDIR)/enclave_u.h
 
-# ALTERAÇÃO 2.3: Adiciona o diretório de objetos aos paths de include
-# Isto permite que o compilador encontre o ficheiro enclave_u.h gerado
 App_Include_Paths := -I$(APP_INCDIR) -I$(APP_OBJDIR) -I$(SGX_SDK)/include
 
 App_C_Flags := -fPIC -Wno-attributes $(App_Include_Paths)
-
-# Debug configuration mode - Macro DEBUG enabled
 App_C_Flags += -DDEBUG -UNDEBUG -UEDEBUG
 
-App_Cpp_Flags := $(App_C_Flags)
-
-# ALTERAÇÃO 9: Adiciona bibliotecas SGX necessárias para a ligação
-# Seleciona automaticamente as libs de simulação (SIM) ou hardware (HW)
 ifeq ($(SGX_MODE), HW)
 	Urts_Library := sgx_urts
 	Uae_Service_Library := sgx_uae_service
+	Trts_Library := sgx_trts
+	Service_Library := sgx_tservice
 else
 	Urts_Library := sgx_urts_sim
 	Uae_Service_Library := sgx_uae_service_sim
+	Trts_Library := sgx_trts_sim
+	Service_Library := sgx_tservice_sim
 endif
 
-# -L$(SGX_LIBRARY_PATH): caminho para as bibliotecas definidas no buildenv
-# -l$(Urts_Library): biblioteca para criar/destruir enclaves (sgx_create_enclave, sgx_destroy_enclave)
-# -l$(Uae_Service_Library): comunicação com o serviço de atestação
-# -lpthread e -lm: dependências adicionais
-App_Link_Flags := -L$(SGX_SDK)/lib64 -L$(SGX_LIBRARY_PATH) -l$(Urts_Library) -l$(Uae_Service_Library) -lpthread -lm
+App_Link_Flags := -L$(SGX_SDK)/lib64 -L$(SGX_LIBRARY_PATH) -Wl,--no-as-needed -l$(Urts_Library) -l$(Uae_Service_Library) -lpthread -lm -ldl
 
-.PHONY: all target run
+######## Enclave Settings ########
+
+ENCLAVE_DIR := $(APP_DIR)/enclave
+ENCLAVE_SRCDIR := $(ENCLAVE_DIR)/src
+ENCLAVE_INCDIR := $(ENCLAVE_DIR)/inc
+ENCLAVE_CONFDIR := $(ENCLAVE_DIR)/conf
+ENCLAVE_OBJDIR := $(ENCLAVE_DIR)/obj
+
+Enclave_C_Files := $(wildcard $(ENCLAVE_SRCDIR)/*.c)
+Enclave_C_Objects := $(Enclave_C_Files:$(ENCLAVE_SRCDIR)/%.c=$(ENCLAVE_OBJDIR)/%.o)
+
+Enclave_Include_Paths := -I$(ENCLAVE_INCDIR) -I$(ENCLAVE_SRCDIR) -I$(SGX_SDK)/include -I$(SGX_SDK)/include/tlibc -I$(SGX_SDK)/include/libcxx
+
+Enclave_C_Flags := -nostdinc -fvisibility=hidden -fpie -fstack-protector $(Enclave_Include_Paths)
+Enclave_C_Flags += -fno-builtin-printf -I.
+
+Enclave_Link_Flags := -Wl,--no-undefined -nostdlib -nodefaultlibs -nostartfiles -L$(SGX_LIBRARY_PATH) \
+	-Wl,--whole-archive -l$(Trts_Library) -Wl,--no-whole-archive \
+	-Wl,--start-group -lsgx_tstdc -lsgx_tcxx -lsgx_tcrypto -l$(Service_Library) -Wl,--end-group \
+	-Wl,-Bstatic -Wl,-Bsymbolic -Wl,--no-undefined \
+	-Wl,-pie,-eenclave_entry -Wl,--export-dynamic  \
+	-Wl,--defsym,__ImageBase=0 \
+	-Wl,--version-script=$(ENCLAVE_CONFDIR)/enclave.lds
+
+Enclave_Name := enclave.so
+Enclave_Signed_Name := enclave.signed.so
+Enclave_Config_File := $(ENCLAVE_CONFDIR)/enclave.config.xml
+Enclave_Key := $(ENCLAVE_CONFDIR)/enclave_private.pem
+
+SGX_ENCLAVE_SIGNER := $(SGX_SDK)/bin/x64/sgx_sign
+
+.PHONY: all target run clean
+
 all:
 	@$(MAKE) target
 
-# ALTERAÇÃO 4: Garante que enclave_u.h é gerado antes de compilar a aplicação
-target: $(Enclave_EDL_U_H) $(APP_BINDIR)/$(APP_NAME)
+target: $(Enclave_EDL_U_H) $(APP_BINDIR)/$(APP_NAME) $(ENCLAVE_DIR)/$(Enclave_Signed_Name)
 
 run: all
 	@cd $(APP_BINDIR) && ./$(APP_NAME)
 	@echo "RUN  =>  $(APP_NAME) [$(SGX_MODE)|$(SGX_ARCH), OK]"
 
 ######## EDL Compilation ########
-# ALTERAÇÃO 2.4 e 2.5: Regras para compilar o EDL
-# O compilador EDL (sgx_edger8r) gera código C a partir do ficheiro .edl
 
-# ALTERAÇÃO 2.4: Gera os ficheiros untrusted (enclave_u.h e enclave_u.c) a partir do EDL
-# --untrusted: gera código para a aplicação (untrusted side)
-# --search-path: diretórios onde procurar ficheiros incluídos no EDL
-# --untrusted-dir: diretório onde colocar os ficheiros gerados
-# ALTERAÇÃO 6: Usa o caminho completo do edger8r se a variável não estiver definida
 EDGER8R := $(if $(SGX_EDGER8R),$(SGX_EDGER8R),$(SGX_SDK)/bin/x64/sgx_edger8r)
+
 $(Enclave_EDL_U): $(Enclave_EDL)
 	@mkdir -p $(APP_OBJDIR)
 	@$(EDGER8R) --untrusted $(Enclave_EDL) \
 		--search-path $(SGX_SDK)/include \
-		--search-path $(APP_DIR)/enclave/conf \
+		--search-path $(ENCLAVE_CONFDIR) \
 		--untrusted-dir $(APP_OBJDIR)
-	@echo "EDL  =>  $@"
+	@echo "EDL (U) => $@"
 
-# ALTERAÇÃO 3: Regra explícita para enclave_u.h
-# Garante que o make sabe que este ficheiro é gerado pela regra acima
-# O sgx_edger8r gera ambos os ficheiros .c e .h ao mesmo tempo
 $(Enclave_EDL_U_H): $(Enclave_EDL_U)
 
-# ALTERAÇÃO 2.5: Compila o ficheiro enclave_u.c gerado pelo EDL
-# Este ficheiro contém as funções stub que permitem à aplicação chamar o enclave
-# Depende também de enclave_u.h para garantir que ambos são gerados primeiro
 $(APP_OBJDIR)/enclave_u.o: $(Enclave_EDL_U) $(Enclave_EDL_U_H)
 	@$(CC) $(SGX_COMMON_CFLAGS) $(App_C_Flags) -c $< -o $@
 	@echo "CC   <=  $<"
 
 ######## App Objects ########
 
-# ALTERAÇÃO 2.6: Adiciona dependência de enclave_u.h
-# Garante que o ficheiro enclave_u.h é gerado antes de compilar app.c
-# Isto resolve o erro "enclave_u.h: No such file or directory"
 $(APP_OBJDIR)/%.o: $(APP_SRCDIR)/%.c $(Enclave_EDL_U_H)
 	@mkdir -p $(APP_OBJDIR)
 	@$(CC) $(SGX_COMMON_CFLAGS) $(App_C_Flags) -c $< -o $@
 	@echo "CC   <=  $<"
 
-# ALTERAÇÃO 2.7: Cria o diretório bin se não existir
 $(APP_BINDIR)/$(APP_NAME): $(App_C_Objects)
 	@mkdir -p $(APP_BINDIR)
-	@$(CC) $^ -o $@ $(App_Link_Flags)
+	$(CC) $^ -o $@ $(App_Link_Flags)
 	@echo "LINK =>  $@"
 
-.PHONY: clean
+######## Enclave Build ########
+
+Enclave_EDL_T_C := $(ENCLAVE_SRCDIR)/enclave_t.c
+Enclave_EDL_T_H := $(ENCLAVE_SRCDIR)/enclave_t.h
+
+$(Enclave_EDL_T_C): $(Enclave_EDL)
+	@mkdir -p $(ENCLAVE_SRCDIR)
+	@$(EDGER8R) --trusted $(Enclave_EDL) \
+		--search-path $(SGX_SDK)/include \
+		--search-path $(ENCLAVE_CONFDIR) \
+		--trusted-dir $(ENCLAVE_SRCDIR)
+	@echo "EDL (T) => $@"
+
+$(Enclave_EDL_T_H): $(Enclave_EDL_T_C)
+
+$(ENCLAVE_OBJDIR)/enclave_t.o: $(Enclave_EDL_T_C)
+	@mkdir -p $(ENCLAVE_OBJDIR)
+	@$(CC) $(SGX_COMMON_CFLAGS) $(Enclave_C_Flags) -c $< -o $@
+	@echo "CC   <=  $<"
+
+$(ENCLAVE_OBJDIR)/%.o: $(ENCLAVE_SRCDIR)/%.c $(Enclave_EDL_T_H)
+	@mkdir -p $(ENCLAVE_OBJDIR)
+	@$(CC) $(SGX_COMMON_CFLAGS) $(Enclave_C_Flags) -c $< -o $@
+	@echo "CC   <=  $<"
+
+$(ENCLAVE_DIR)/$(Enclave_Name): $(Enclave_C_Objects) $(ENCLAVE_OBJDIR)/enclave_t.o
+	@$(CC) $^ -o $@ $(Enclave_Link_Flags)
+	@echo "LINK =>  $@"
+
+$(ENCLAVE_DIR)/$(Enclave_Signed_Name): $(ENCLAVE_DIR)/$(Enclave_Name)
+	@if [ ! -f $(Enclave_Key) ]; then openssl genrsa -out $(Enclave_Key) -3 3072; fi
+	@$(SGX_ENCLAVE_SIGNER) sign -key $(Enclave_Key) -enclave $(ENCLAVE_DIR)/$(Enclave_Name) -out $@ -config $(Enclave_Config_File)
+	@echo "SIGN =>  $@"
+
 clean:
-	# ALTERAÇÃO 2.8: Remove também os ficheiros gerados pelo EDL durante a limpeza
 	@rm -f $(APP_BINDIR)/$(APP_NAME) $(App_C_Objects) $(APP_OBJDIR)/enclave_u.*
+	@rm -f $(ENCLAVE_DIR)/$(Enclave_Name) $(ENCLAVE_DIR)/$(Enclave_Signed_Name) $(Enclave_C_Objects) $(ENCLAVE_OBJDIR)/enclave_t.* $(ENCLAVE_SRCDIR)/enclave_t.c $(ENCLAVE_SRCDIR)/enclave_t.h
 	@echo "Cleanup complete!"
