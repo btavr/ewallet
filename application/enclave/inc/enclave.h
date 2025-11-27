@@ -23,7 +23,9 @@
 #ifndef RAND_MAX
 #define	RAND_MAX 2147483647 /* The largest number rand will return (same as INT_MAX)  */
 #endif
+#ifndef UINT32_MAX
 #define UINT32_MAX 4294967295U
+#endif
 #define ALPHA_SIZE 26
 #define NUM_SIZE 10
 #define SYM_SIZE 21

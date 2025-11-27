@@ -48,8 +48,8 @@ int is_wallet(void);
 int is_error(int error_code);
 void show_help();
 void show_version();
-int ocall_save_wallet(uint8_t *data, int size);
-int ocall_load_wallet(uint8_t *data, int size);
+int ocall_save_wallet(const uint8_t *data, uint32_t size);
+int ocall_load_wallet(uint8_t *data, uint32_t size);
 void ocall_print_string( const char *str);
 
 #endif // !_APP_H_

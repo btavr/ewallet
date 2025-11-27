@@ -276,7 +276,7 @@ int is_wallet(void) {
     return 0;
 }
 
-int ocall_save_wallet(uint8_t *data, int size)
+int ocall_save_wallet(const uint8_t *data, uint32_t size)
 {
     FILE *fp = fopen(WALLET_FILE, "w");
     if (fp == NULL ){
@@ -287,7 +287,7 @@ int ocall_save_wallet(uint8_t *data, int size)
 	return 0;
 }
 
-int ocall_load_wallet(uint8_t *data, int size) {
+int ocall_load_wallet(uint8_t *data, uint32_t size) {
     FILE *fp = fopen(WALLET_FILE, "r");
     if (fp == NULL ){
         return 1;
