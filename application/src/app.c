@@ -119,6 +119,9 @@ int main(int argc, char** argv) {
 
     // perform actions
     if (stop != 1) {
+        int ret;
+        sgx_status_t status;
+
         // show help
         if (h_flag) {
             show_help();
@@ -133,8 +136,7 @@ int main(int argc, char** argv) {
             	pwd_size = atoi(l_value) + 1;
             }
 
-            int ret;
-            sgx_status_t status = ecall_generate_password(global_eid, &ret, pwd_size);
+            status = ecall_generate_password(global_eid, &ret, pwd_size);
             if (status != SGX_SUCCESS) {
                 print_error_message(status);
                 ret = -1;
@@ -147,13 +149,11 @@ int main(int argc, char** argv) {
 
         // create new wallet
         else if(p_value!=NULL && n_flag) {
-            int ret_val;
-            sgx_status_t status = ecall_create_wallet(global_eid, &ret_val, p_value);
+            status = ecall_create_wallet(global_eid, &ret, p_value);
             if (status != SGX_SUCCESS) {
                 print_error_message(status);
-                ret_val = -1;
+                ret = -1;
             }
-            ret = ret_val;
             if (is_error(ret)) {
             	printf("[ERROR] Failed to create new eWallet.\n");
             }
@@ -163,25 +163,27 @@ int main(int argc, char** argv) {
         }
 
         // change master-password
-        /*else if (p_value!=NULL && c_value!=NULL) {
-            ret = change_master_password(p_value, c_value);
+        else if (p_value!=NULL && c_value!=NULL) {
+            status = ecall_change_master_password(global_eid, &ret, p_value, c_value);
+            if (status != SGX_SUCCESS) {
+                print_error_message(status);
+                ret = -1;
+            }
             if (is_error(ret)) {
             	printf("[ERROR] Failed to change master-password.\n");
             }
             else {
             	printf("[INFO] Master-password successfully changed.\n");
             }
-        }*/
+        }
 
         // show wallet
         else if(p_value!=NULL && s_flag) {
-            int ret_val;
-            sgx_status_t status = ecall_show_wallet(global_eid, &ret_val, p_value);
+            status = ecall_show_wallet(global_eid, &ret, p_value);
             if (status != SGX_SUCCESS) {
                 print_error_message(status);
-                ret_val = -1;
+                ret = -1;
             }
-            ret = ret_val;
             if (is_error(ret)) {
             	printf("[ERROR] Failed to retrieve eWallet.\n");
             }
@@ -189,13 +191,11 @@ int main(int argc, char** argv) {
 
         // add item
         else if (p_value!=NULL && a_flag && x_value!=NULL && y_value!=NULL && z_value!=NULL) {
-            int ret_val;
-            sgx_status_t status = ecall_add_item(global_eid, &ret_val, p_value, x_value, y_value, z_value);
+            status = ecall_add_item(global_eid, &ret, p_value, x_value, y_value, z_value);
             if (status != SGX_SUCCESS) {
                 print_error_message(status);
-                ret_val = -1;
+                ret = -1;
             }
-            ret = ret_val;
             if (is_error(ret)) {
             	printf("[ERROR] Failed to add new item to the eWallet.\n");
             }
@@ -212,13 +212,11 @@ int main(int argc, char** argv) {
             	printf("[ERROR] Option -r requires an integer argument.\n");
             }
             else {
-                int ret_val;
-                sgx_status_t status = ecall_remove_item(global_eid, &ret_val, p_value, index);
+                status = ecall_remove_item(global_eid, &ret, p_value, index);
                 if (status != SGX_SUCCESS) {
                     print_error_message(status);
-                    ret_val = -1;
+                    ret = -1;
                 }
-                ret = ret_val;
                 if (is_error(ret)) {
                 	printf("[ERROR] Failed to remove item from the eWallet.\n");
                 }
@@ -269,62 +267,6 @@ int create_wallet(const char* master_password) {
 	return ret_val;
 }
 
-/* Função antiga - não é mais usada, substituída por ecall_show_wallet
-int show_wallet(const char* master_password, wallet_t* wallet, size_t wallet_size) {
-
-	int ret;
-
-	// load wallet
-	ret = load_wallet(wallet, sizeof(wallet_t));
-	if (ret != 0) {
-		return ERR_CANNOT_LOAD_WALLET;
-	}
-
-	// verify master-password
-	if (strcmp(wallet->master_password, master_password) != 0) {
-		return ERR_WRONG_MASTER_PASSWORD;
-	}
-
-	return RET_SUCCESS;
-}
-*/
-
-/*int change_master_password(const char* old_password, const char* new_password) {
-
-	int ret;
-
-	// check password policy
-	if (strlen(new_password) < 8 || strlen(new_password)+1 > WALLET_MAX_ITEM_SIZE) {
-		return ERR_PASSWORD_OUT_OF_RANGE;
-	}
-
-	// load wallet
-	wallet_t* wallet = (wallet_t*)malloc(sizeof(wallet_t));
-	ret = load_wallet(wallet, sizeof(wallet_t));
-	if (ret != 0) {
-		free(wallet);
-		return ERR_CANNOT_LOAD_WALLET;
-	}
-
-	// verify master-password
-	if (strcmp(wallet->master_password, old_password) != 0) {
-		free(wallet);
-		return ERR_WRONG_MASTER_PASSWORD;
-	}
-
-	// update password
-	strncpy(wallet->master_password, new_password, strlen(new_password)+1);
-
-	// save wallet
-	ret = save_wallet(wallet, sizeof(wallet_t));
-	free(wallet);
-	if (ret != 0) {
-		return ERR_CANNOT_SAVE_WALLET;
-	}
-
-	return RET_SUCCESS;
-}*/
-
 int is_wallet(void) {
     FILE *fp = fopen(WALLET_FILE, "r");
     if (fp == NULL ){
@@ -334,7 +276,7 @@ int is_wallet(void) {
     return 0;
 }
 
-int ocall_save_wallet(const uint8_t *data, int size)
+int ocall_save_wallet(uint8_t *data, int size)
 {
     FILE *fp = fopen(WALLET_FILE, "w");
     if (fp == NULL ){
@@ -356,7 +298,7 @@ int ocall_load_wallet(uint8_t *data, int size) {
 }
 
 /* OCall functions */
-void ocall_print_string( const char *str )
+void ocall_print_string( const char *str)
 {
 	/* Proxy/Bridge will check the length and null-terminate 
 	 * the input string to prevent buffer overflow. 

@@ -28,7 +28,13 @@ int printf( const char *fmt, ... )
     return ( (int) strnlen( buf, BUFSIZ - 1 ) + 1 );
 }
 
-//transform a string into an integer
+/*
+* yetAnotherAtoiBecauseSgxNotFound
+*	Converts @str into an integer and returns the value.
+*	Returns 
+*	the the converted value 
+*	0 if the value is not valid
+*/
 int yetAnotherAtoiBecauseSgxNotFound(char *str)
 {
  int res = 0; // Initialize result
@@ -44,14 +50,25 @@ int yetAnotherAtoiBecauseSgxNotFound(char *str)
  return res;
 }
 
-//generates a random integer
+/*
+* get_random_int
+*	Generates a random integer
+*	Returns 
+*	the generated integer
+*/
 int get_random_int( void ) {
     unsigned char rand_num[10];
     sgx_status_t rand_ret = sgx_read_rand(rand_num, sizeof(rand_num));
     return yetAnotherAtoiBecauseSgxNotFound(rand_num);
 }
 
-//returns 0 if the parameter n is not a prime number else it returns 1
+/*
+* is_prime
+*	Validates if integer @n is a prime number
+*	Returns 
+*	0 if @n is prime number
+*	1 if @n is not a prime number
+*/
 int is_prime( int n ) {
 
 	int p = 1;
@@ -73,7 +90,13 @@ int is_prime( int n ) {
     return p;
 }
 
-//generate random password with size p_length between 8 and 100
+/*
+* generate_password
+*	Generates a random password with size @p_length
+*	Returns
+*	ERR_PASSWORD_OUT_OF_RANGE - @p_length not between 8 and 100
+*	RET_SUCCESS - SUCCESS RETURN
+*/
 int generate_password(char *p_value, int p_length) {
 
 	int i, randomizer;
@@ -110,12 +133,23 @@ int generate_password(char *p_value, int p_length) {
 	return RET_SUCCESS;
 }
 
+/*
+* get_pwd_char
+* this math does not seem right
+*/
 char get_pwd_char(char *charlist, int len)
 {
 	return (charlist[(get_random_int() / (RAND_MAX / len))]);
 }
 
-//Seals the provided wallet, if it fails it will release the sealed buffer resources and return an error code
+/*
+* seal_my_wallet
+*	Seals the provided wallet
+*	releases the memory allocated for @wallet
+*	Returns
+*	ERROR_SGX_FAILURE_SEAL - if it could not seal the data, releases the memory allocated for @sealed_buffer
+*	RET_SUCCESS - SUCCESS RETURN
+*/
 int seal_my_wallet(wallet_t* wallet, uint32_t sealed_size, uint8_t *sealed_buffer)
 {
     sgx_status_t ret = sgx_seal_data(0, NULL, sizeof(wallet_t), (uint8_t*)wallet, sealed_size, (sgx_sealed_data_t*)sealed_buffer);
@@ -123,12 +157,19 @@ int seal_my_wallet(wallet_t* wallet, uint32_t sealed_size, uint8_t *sealed_buffe
 
     if (ret != SGX_SUCCESS) {
         free(sealed_buffer);
-        return SGX_ERROR_FAILURE_SEAL;
+        return ERROR_SGX_FAILURE_SEAL;
     }
 	return RET_SUCCESS;
 }
 
-//Unseals the provided wallet, if it fails it will release allocated wallet resources and return an error code
+/*
+* unseal_my_wallet
+*	Unseals the provided wallet
+*	releases the memory allocated for @sealed_buffer
+*	Returns
+*	SGX_ERROR_FAILURE_UNSEAL - if it could not unseal the data, releases the memory allocated for @wallet
+*	RET_SUCCESS - SUCCESS RETURN
+*/
 int unseal_my_wallet(wallet_t* wallet, uint32_t sealed_size, uint8_t *sealed_buffer)
 {
     uint32_t out_len = sizeof(wallet_t);
@@ -137,13 +178,91 @@ int unseal_my_wallet(wallet_t* wallet, uint32_t sealed_size, uint8_t *sealed_buf
 
     if (ret != SGX_SUCCESS) {
 		free(wallet);
-		return SGX_ERROR_FAILURE_UNSEAL;
+		return ERROR_SGX_FAILURE_UNSEAL;
 	}
 
 	return RET_SUCCESS;
 }
 
-//create a new wallet
+/*
+* save_wallet
+*	Saves the wallet to a file
+*	Returns
+*	ERR_CANNOT_SAVE_WALLET - could not save the wallet to file
+*	RET_SUCCESS - SUCCESS RETURN
+*/
+int save_wallet(wallet_t* wallet) {
+
+	int ret;
+
+	//create sealed size
+	uint32_t sealed_size = sgx_calc_sealed_data_size(0, sizeof(wallet_t));
+    if (sealed_size == UINT32_MAX) {
+        return ERR_CANNOT_SAVE_WALLET;
+	}
+
+	//create sealed buffer
+    uint8_t *sealed_buffer = (uint8_t*) malloc(sealed_size);
+    if (!sealed_buffer) {
+		free(sealed_buffer);
+        return ERR_CANNOT_SAVE_WALLET;
+	}
+
+	ret = seal_my_wallet(wallet, sealed_size, sealed_buffer);
+
+	if(ret == RET_SUCCESS) {
+		//Send sealed data to untrusted app
+		ret = ocall_save_wallet(sealed_buffer, sealed_size);
+	}
+
+	free(sealed_buffer);
+
+	if (ret != 0) {
+		return ERR_CANNOT_SAVE_WALLET;
+	}
+	return RET_SUCCESS;	
+}
+
+/*
+* load_wallet
+*	Loads the wallet from file
+*	Returns
+*	ERR_CANNOT_LOAD_WALLET - could not load the wallet to file
+*	RET_SUCCESS - SUCCESS RETURN
+*/
+int load_wallet(wallet_t* wallet) {
+
+	int ret;
+	
+	//create sealed size
+	uint32_t sealed_size = sgx_calc_sealed_data_size(0, sizeof(wallet_t));
+    if (sealed_size == UINT32_MAX) {
+        return ERR_CANNOT_LOAD_WALLET;
+	}
+
+	uint8_t* sealed_buffer = (uint8_t*)malloc(sizeof(wallet_t));
+
+	// load wallet
+	ret = ocall_load_wallet(sealed_buffer, sealed_size);
+	if (ret != 0) {
+		free(sealed_buffer);
+		return ERR_CANNOT_LOAD_WALLET;
+	}
+
+	//unseal wallet
+	ret = unseal_my_wallet(wallet, sealed_size, sealed_buffer);
+	free(sealed_buffer);
+	return ret;
+}
+
+/*
+* create_wallet
+*	Creates a new wallet
+*	Returns
+*	ERR_PASSWORD_OUT_OF_RANGE - @p_length not between 8 and 100
+*	ERR_CANNOT_SAVE_WALLET - could not save the wallet to file, failure to create wallet
+*	RET_SUCCESS - SUCCESS RETURN
+*/
 int create_wallet(const char* master_password) {
 
 	int ret;
@@ -153,40 +272,25 @@ int create_wallet(const char* master_password) {
 		return ERR_PASSWORD_OUT_OF_RANGE;
 	}
 
-	//create sealed size
-	uint32_t sealed_size = sgx_calc_sealed_data_size(0, sizeof(wallet_t));
-    if (sealed_size == UINT32_MAX) {
-        return ERR_CANNOT_SAVE_WALLET;
-	}
-
 	// create new wallet
 	wallet_t* wallet = (wallet_t*)malloc(sizeof(wallet_t));
 	wallet->size = 0;
 	strncpy(wallet->master_password, master_password, strlen(master_password)+1);
 
-	//create sealed buffer
-    uint8_t *sealed_buffer = (uint8_t*) malloc(sealed_size);
-    if (!sealed_buffer) {
-		free(sealed_buffer);
-		free(wallet);
-        return ERR_CANNOT_SAVE_WALLET;
-	}
-
-	ret = seal_my_wallet(wallet, sealed_size, sealed_buffer);
-
-	if(ret == RET_SUCCESS) {
-		//Send sealed data to untrusted app
-		ret = ocall_save_wallet(sealed_buf, sealed_size);
-		free(sealed_buf);
-	}
-	
-	if (ret != 0) {
-		return ERR_CANNOT_SAVE_WALLET;
-	}
-	return RET_SUCCESS;
+	//save wallet
+	ret = save_wallet(wallet);
+	free(wallet);
+	return ret;
 }
 
-//prints wallet data to the console
+/*
+* show_wallet
+*	Prints the wallet to the console
+*	Returns
+*	ERR_PASSWORD_OUT_OF_RANGE - @p_length not between 8 and 100
+*	ERR_CANNOT_LOAD_WALLET - could not load the wallet to file
+*	RET_SUCCESS - SUCCESS RETURN
+*/
 int show_wallet(const char* master_password) {
 
 	int ret;
@@ -196,35 +300,22 @@ int show_wallet(const char* master_password) {
 		return ERR_WRONG_MASTER_PASSWORD;
 	}
 
-	//create sealed size
-	uint32_t sealed_size = sgx_calc_sealed_data_size(0, sizeof(wallet_t));
-    if (sealed_size == UINT32_MAX) {
-        return SGX_ERROR_INVALID_PARAMETER;
-	}
-	uint8_t* sealed_buffer = (uint8_t*)malloc(sizeof(wallet_t));
 	wallet_t* wallet = (wallet_t*)malloc(sizeof(wallet_t));
+	ret = load_wallet(wallet);
 	
-	// load wallet
-	ret = ocall_load_wallet(sealed_buffer, sealed_size);
-	if (ret != 0) {
-		free(sealed_buffer);
-		free(wallet);
-		return ERR_CANNOT_LOAD_WALLET;
+	if (ret == RET_SUCCESS) {
+		printf("[INFO] eWallet successfully retrieved.\n");
+		print_wallet(wallet);
 	}
 
-	//unseal wallet
-	ret = unseal_my_wallet(wallet, sealed_size, sealed_buffer);
-	if (ret != 0) {
-		return ERR_CANNOT_LOAD_WALLET;
-	}
-	
-	printf("[INFO] eWallet successfully retrieved.\n");
-	print_wallet(wallet);
 	free(wallet);
-	return RET_SUCCESS;
+	return ret;
 }
 
-//prints a wallet to the console
+/*
+* print_wallet
+*	Prints the wallet to the console
+*/
 void print_wallet(const wallet_t* wallet) {
     printf("\n-----------------------------------------\n");
     printf("Simple password eWallet.\n");
@@ -238,7 +329,17 @@ void print_wallet(const wallet_t* wallet) {
     printf("\n------------------------------------------\n\n");
 }
 
-//adds an item to the wallet if the password provided is the wallets password
+/*
+* add_item
+*	Adds an item to the wallet
+*	Returns
+*	ERR_ITEM_TOO_LONG - one or more @item parameter/s is/are too long
+*	ERR_CANNOT_LOAD_WALLET - could not load the wallet to file
+*	ERR_WRONG_MASTER_PASSWORD - if the wallet password does not have the same value as the password provided
+*	ERR_WALLET_FULL - wallet is full, please delete an item from the wallet first
+*	ERR_CANNOT_SAVE_WALLET - could not save the wallet to file
+*	RET_SUCCESS - SUCCESS RETURN
+*/
 int add_item(const char* master_password, const item_t* item, const size_t item_size) {
 
 	int ret;
@@ -250,28 +351,16 @@ int add_item(const char* master_password, const item_t* item, const size_t item_
 		return ERR_ITEM_TOO_LONG;
     }
 
-	//create sealed size
-	uint32_t sealed_size = sgx_calc_sealed_data_size(0, sizeof(wallet_t));
-    if (sealed_size == UINT32_MAX) {
-        return SGX_ERROR_INVALID_PARAMETER;
-	}
-	uint8_t* sealed_buffer = (uint8_t*)malloc(sizeof(wallet_t));
 	wallet_t* wallet = (wallet_t*)malloc(sizeof(wallet_t));
-	
-	// load wallet
-	ret = ocall_load_wallet(sealed_buffer, sealed_size);
-	if (ret != 0) {
-		free(sealed_buffer);
+
+	//load wallet
+	ret = load_wallet(wallet);
+
+	if(ret != RET_SUCCESS) {
 		free(wallet);
-		return ERR_CANNOT_LOAD_WALLET;
+		return ret;
 	}
 
-	//unseal wallet
-	ret = unseal_my_wallet(wallet, sealed_size, sealed_buffer);
-	if (ret != 0) {
-		return ERR_CANNOT_LOAD_WALLET;
-	}
-	
 	// verify master-password
 	if (strcmp(wallet->master_password, master_password) != 0) {
 		free(wallet);
@@ -288,33 +377,24 @@ int add_item(const char* master_password, const item_t* item, const size_t item_
 	wallet->items[wallet_size] = *item;
 	++wallet->size;
 
-	//create sealed buffer
-	sealed_buffer = NULL;
-    sealed_buffer = (uint8_t*) malloc(sealed_size);
-    if (!sealed_buffer) {
-		free(sealed_buffer);
-		free(wallet);
-        return ERR_CANNOT_SAVE_WALLET;
-	}
-
-	//seal wallet
-	ret = seal_my_wallet(wallet, sealed_size, sealed_buffer);
-
-	if(ret == RET_SUCCESS) {
-		//save wallet
-		ret = ocall_save_wallet(sealed_buf, sealed_size);
-		free(sealed_buf);
-	}
-
-	if (ret != 0) {
-		return ERR_CANNOT_SAVE_WALLET;
-	}
+	//save wallet
+	ret = save_wallet(wallet);
+	free(wallet);
 
 	// exit
-	return RET_SUCCESS;
+	return ret;
 }
 
-//removes an entry from the wallet if the password provided is the wallets password and the index is a valid index
+/*
+* remove_item
+*	Removes an item from the wallet
+*	Returns
+*	ERR_ITEM_DOES_NOT_EXIST - @index is not between 0 and 100 or it does not exist in the wallet;
+*	ERR_CANNOT_LOAD_WALLET - could not load the wallet to file
+*	ERR_WRONG_MASTER_PASSWORD - if the wallet password does not have the same value as the password provided
+*	ERR_CANNOT_SAVE_WALLET - could not save the wallet to file
+*	RET_SUCCESS - SUCCESS RETURN
+*/
 int remove_item(const char* master_password, const int index) {
 
 	int ret;
@@ -324,26 +404,13 @@ int remove_item(const char* master_password, const int index) {
 		return ERR_ITEM_DOES_NOT_EXIST;
 	}
 
-	//create sealed size
-	uint32_t sealed_size = sgx_calc_sealed_data_size(0, sizeof(wallet_t));
-    if (sealed_size == UINT32_MAX) {
-        return SGX_ERROR_INVALID_PARAMETER;
-	}
-	uint8_t* sealed_buffer = (uint8_t*)malloc(sizeof(wallet_t));
 	wallet_t* wallet = (wallet_t*)malloc(sizeof(wallet_t));
-	
-	// load wallet
-	ret = ocall_load_wallet(sealed_buffer, sealed_size);
-	if (ret != 0) {
-		free(sealed_buffer);
-		free(wallet);
-		return ERR_CANNOT_LOAD_WALLET;
-	}
 
-	//unseal wallet
-	ret = unseal_my_wallet(wallet, sealed_size, sealed_buffer);
-	if (ret != 0) {
-		return ERR_CANNOT_LOAD_WALLET;
+	ret = load_wallet(wallet);
+
+	if (ret != RET_SUCCESS) {
+		free(wallet);
+		return ret;
 	}
 	
 	// verify master-password
@@ -363,30 +430,56 @@ int remove_item(const char* master_password, const int index) {
 	}
 	--wallet->size;
 
-	//create sealed buffer
-	sealed_buffer = NULL;
-    sealed_buffer = (uint8_t*) malloc(sealed_size);
-    if (!sealed_buffer) {
-		free(sealed_buffer);
-		free(wallet);
-        return ERR_CANNOT_SAVE_WALLET;
-	}
-
-	//seal wallet
-	ret = seal_my_wallet(wallet, sealed_size, sealed_buffer);
-
-	if(ret == RET_SUCCESS) {
-		//save wallet
-		ret = ocall_save_wallet(sealed_buf, sealed_size);
-		free(sealed_buf);
-	}
-	
-	if (ret != 0) {
-		return ERR_CANNOT_SAVE_WALLET;
-	}
+	//save wallet
+	ret = save_wallet(wallet);
+	free(wallet);
 
 	// exit
-	return RET_SUCCESS;
+	return ret;
+}
+
+/*
+* change_master_password
+*	Changes the master password of the wallet
+*	Returns
+*	ERR_PASSWORD_OUT_OF_RANGE - @p_length not between 8 and 100
+*	ERR_CANNOT_LOAD_WALLET - could not load the wallet to file
+*	ERR_WRONG_MASTER_PASSWORD - if the wallet password does not have the same value as the password provided
+*	ERR_CANNOT_SAVE_WALLET - could not save the wallet to file
+*	RET_SUCCESS - SUCCESS RETURN
+*/
+int change_master_password(const char* old_password, const char* new_password) {
+
+	int ret;
+
+	// check password policy
+	if (strlen(new_password) < 8 || strlen(new_password)+1 > WALLET_MAX_ITEM_SIZE) {
+		return ERR_PASSWORD_OUT_OF_RANGE;
+	}
+
+	
+	wallet_t* wallet = (wallet_t*)malloc(sizeof(wallet_t));
+
+	// load wallet
+	ret = load_wallet(wallet);
+	if (ret != RET_SUCCESS) {
+		free(wallet);
+		return ERR_CANNOT_LOAD_WALLET;
+	}
+
+	// verify master-password
+	if (strcmp(wallet->master_password, old_password) != 0) {
+		free(wallet);
+		return ERR_WRONG_MASTER_PASSWORD;
+	}
+
+	// update password
+	strncpy(wallet->master_password, new_password, strlen(new_password)+1);
+
+	// save wallet
+	ret = save_wallet(wallet, sizeof(wallet_t));
+	free(wallet);
+	return ret;
 }
 
 //ECALL to generate and print random numbers until the number generated is a prime number
@@ -440,4 +533,8 @@ int ecall_add_item(const char* master_password, const char* title, const char* u
 //ECALL to remove an item from wallet
 int ecall_remove_item(const char* master_password, const int index) {
 	return remove_item(master_password, index);
+}
+
+int ecall_change_master_password(const char* old_password, const char* new_password) {
+	return change_master_password(old_password, new_password);
 }

@@ -15,8 +15,8 @@
 #define ERR_ITEM_TOO_LONG 8
 
 #define SGX_ERROR_INVALID_PARAMETER  11
-#define SGX_ERROR_FAILURE_SEAL  12
-#define SGX_ERROR_FAILURE_UNSEAL  13
+#define ERROR_SGX_FAILURE_SEAL  12
+#define ERROR_SGX_FAILURE_UNSEAL  13
 
 
 
@@ -58,10 +58,13 @@ int generate_password(char *p_value, int p_length);
 char get_pwd_char(char *charlist, int len);
 int seal_my_wallet(wallet_t* wallet, uint32_t sealed_size, uint8_t *sealed_buffer);
 int unseal_my_wallet(wallet_t* wallet, uint32_t sealed_size, uint8_t *sealed_buffer);
+int save_wallet(wallet_t* wallet);
+int load_wallet(wallet_t* wallet);
 int create_wallet(const char* master_password);
 int show_wallet(const char* master_password);
 void print_wallet(const wallet_t* wallet);
 int add_item(const char* master_password, const item_t* item, const size_t item_size);
 int remove_item(const char* master_password, const int index);
+int change_master_password(const char* old_password, const char* new_password);
 
 #endif /* !_ENCLAVE_H_ */

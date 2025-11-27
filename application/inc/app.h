@@ -44,19 +44,12 @@ struct Wallet {
 };
 typedef struct Wallet wallet_t;
 
-int generate_password(char *p_value, int p_length);
-char get_pwd_char(char *charlist, int len);
-//int change_master_password(const char* old_password, const char* new_password);
-//int add_item(const char* master_password, const item_t* item, const size_t item_size);
-//int remove_item(const char* master_password, const int index);
-//int save_wallet(const wallet_t* wallet, const size_t wallet_size);
-//int load_wallet(wallet_t* wallet, const size_t wallet_size);
 int is_wallet(void);
-int create_wallet(const char* master_password);
-int show_wallet(const char* master_password, wallet_t* wallet, size_t wallet_size);
-//void print_wallet(const wallet_t* wallet);
 int is_error(int error_code);
 void show_help();
 void show_version();
+int ocall_save_wallet(uint8_t *data, int size);
+int ocall_load_wallet(uint8_t *data, int size);
+void ocall_print_string( const char *str);
 
 #endif // !_APP_H_
