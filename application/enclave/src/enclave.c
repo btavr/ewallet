@@ -296,15 +296,16 @@ int show_wallet(const char* master_password) {
 
 	int ret;
 	
-	// verify master-password
-	if (strcmp(wallet->master_password, master_password) != 0) {
-		return ERR_WRONG_MASTER_PASSWORD;
-	}
-
 	wallet_t* wallet = (wallet_t*)malloc(sizeof(wallet_t));
 	ret = load_wallet(wallet);
 	
 	if (ret == RET_SUCCESS) {
+		// verify master-password
+		if (strcmp(wallet->master_password, master_password) != 0) {
+			free(wallet);
+			return ERR_WRONG_MASTER_PASSWORD;
+		}
+
 		printf("[INFO] eWallet successfully retrieved.\n");
 		print_wallet(wallet);
 	}
@@ -478,7 +479,7 @@ int change_master_password(const char* old_password, const char* new_password) {
 	strncpy(wallet->master_password, new_password, strlen(new_password)+1);
 
 	// save wallet
-	ret = save_wallet(wallet, sizeof(wallet_t));
+	ret = save_wallet(wallet);
 	free(wallet);
 	return ret;
 }
@@ -501,7 +502,7 @@ int ecall_print_prime_random()
 //ECALL to generate random password with p_length between 8 and 100
 int ecall_generate_password(int p_length) {
 
-	char* pwd = (char*)malloc(sizeof(char)*pwd_size);
+	char* pwd = (char*)malloc(sizeof(char)*(p_length+1));
 	int ret = generate_password(pwd, p_length);
 	
 	if (ret == RET_SUCCESS) {
@@ -528,7 +529,9 @@ int ecall_add_item(const char* master_password, const char* title, const char* u
 	strcpy(new_item->title, title);
     strcpy(new_item->username, username);
     strcpy(new_item->password, password);
-	return add_item(master_password, new_item, sizeof(item_t));
+	int ret = add_item(master_password, new_item, sizeof(item_t));
+    free(new_item);
+    return ret;
 }
 
 //ECALL to remove an item from wallet
