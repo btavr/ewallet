@@ -1,7 +1,7 @@
 #ifndef _ENCLAVE_H_
 #define _ENCLAVE_H_
 
-#include "enclave_config.h"
+#include "../conf/enclave_config.h"
 #include "stddef.h" //to validate if secure
 
 #define RET_SUCCESS 0

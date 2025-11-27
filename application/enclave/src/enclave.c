@@ -7,8 +7,8 @@
 #include <sgx_tseal.h>
 
 
-#include "enclave_config.h"
-#include "enclave.h"
+#include "../conf/enclave_config.h"
+#include "../inc/enclave.h"
 #include "enclave_t.h"  /* ocall_print_string */
 
 /* 
